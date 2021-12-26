@@ -1,0 +1,3 @@
+[submodule "third_party/pico-lora"]
+	path = third_party/pico-lora
+	url = https://github.com/akshayabali/pico-lora.git
