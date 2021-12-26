@@ -1,39 +1,106 @@
 #include "../third_party/pico-lora/src/LoRa-RP2040.h"
+#include "../third_party/tiny-AES-c/aes.hpp"
+#include "common.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
 
+namespace {
+
 static constexpr uint GPIO_INFRA = 22; // GP22 - PIN 29
+
+class DoorWatcher {
+public:
+  bool init_lora();
+  void init_encryption();
+  void send_message(std::string message);
+
+private:
+  AES_ctx aes_ctx;
+  uint64_t counter{};
+  uint8_t iv[16]{};
+};
+
+} // namespace
 
 int main() {
   stdio_init_all();
 
-  if (!LoRa.begin(868E6)) {
+  DoorWatcher watcher;
+  if (!watcher.init_lora()) {
     printf("Starting LoRa failed!\n");
     return 1;
   }
 
+  watcher.init_encryption();
+
+  // TODO deep sleep, wake up on open, etc..
   gpio_init(GPIO_INFRA);
 
-  uint8_t counter = 0;
+  static int todo = 0;
   while (true) {
-    printf("Hello, world! %d  infra %d\n", counter, gpio_get(GPIO_INFRA));
     sleep_ms(1000);
-    ++counter;
 
     if (gpio_get(GPIO_INFRA) == 0) {
-      printf("Sending packet: ");
-      printf("%d \n", counter);
-
-      LoRa.beginPacket();
-      std::string hello{"hello"};
-      LoRa.print(hello);
-      LoRa.endPacket();
-      printf("packet sent\n");
-
+      printf("DOOR CLOSED");
+      todo = 0;
+      watcher.send_message("close");
       sleep_ms(3000);
       printf("slept\n");
+    } else {
+      printf("DOOR OPEN");
+      if (todo < 2) {
+        watcher.send_message("open");
+      }
+      sleep_ms(3000);
+      printf("slept\n");
+      ++todo;
     }
   }
   return 0;
+}
+
+bool DoorWatcher::init_lora() { return LoRa.begin(868E6); }
+
+void DoorWatcher::init_encryption() {
+  // NOTE: the key should be replaced!
+  AES_init_ctx(&aes_ctx, GarageAlarm::PRESHARED_KEY);
+
+  // IV 16 byte [ xx xx xx xx xx xx xx xx cc cc cc cc cc cc cc cc ]
+  //  xx xx xx xx xx xx xx xx : random 8 byte using LoRa Wideband RSSI
+  //  cc cc cc cc cc cc cc cc : 8 byte is a 64 bit counter
+  LoRa.receive();
+  for (int i = 0; i < 8; ++i) {
+    iv[i] = LoRa.random();
+  }
+  LoRa.sleep();
+}
+
+void DoorWatcher::send_message(std::string message) {
+  iv[8] = (counter >> 56) & 0xFF;
+  iv[9] = (counter >> 48) & 0xFF;
+  iv[10] = (counter >> 40) & 0xFF;
+  iv[11] = (counter >> 32) & 0xFF;
+  iv[12] = (counter >> 24) & 0xFF;
+  iv[13] = (counter >> 16) & 0xFF;
+  iv[14] = (counter >> 8) & 0xFF;
+  iv[15] = (counter >> 0) & 0xFF;
+
+  printf("Sending message %d %s", counter, message.c_str());
+
+  AES_ctx_set_iv(&aes_ctx, iv);
+  AES_CTR_xcrypt_buffer(&aes_ctx, reinterpret_cast<uint8_t *>(message.data()),
+                        message.size());
+
+  LoRa.beginPacket();
+  LoRa.write(GarageAlarm::MESSAGE_HEADER);
+  for (const auto c : iv) {
+    LoRa.write(c);
+  }
+  LoRa.print(message);
+  LoRa.endPacket();
+
+  LoRa.sleep();
+
+  ++counter;
 }

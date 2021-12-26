@@ -3,6 +3,10 @@ add_executable(doorwatcher
     ../third_party/pico-lora/src/LoRa-RP2040.cpp
     ../third_party/pico-lora/src/Print.h
     ../third_party/pico-lora/src/Print.cpp
+    ../third_party/tiny-AES-c/aes.h
+    ../third_party/tiny-AES-c/aes.hpp
+    ../third_party/tiny-AES-c/aes.c
+    common.h
     main.cpp
 )
 
