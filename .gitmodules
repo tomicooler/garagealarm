@@ -1,3 +1,6 @@
 [submodule "third_party/pico-lora"]
 	path = third_party/pico-lora
 	url = https://github.com/tomicooler/pico-lora.git
+[submodule "third_party/tiny-AES-c"]
+	path = third_party/tiny-AES-c
+	url = https://github.com/kokke/tiny-AES-c.git
