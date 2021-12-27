@@ -6,7 +6,8 @@ add_executable(watchdog
     ../third_party/tiny-AES-c/aes.h
     ../third_party/tiny-AES-c/aes.hpp
     ../third_party/tiny-AES-c/aes.c
-    common.h
+    ../common/common.h
+    ../common/common.cpp
     main.cpp
 )
 

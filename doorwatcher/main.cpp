@@ -1,6 +1,6 @@
+#include "../common/common.h"
 #include "../third_party/pico-lora/src/LoRa-RP2040.h"
 #include "../third_party/tiny-AES-c/aes.hpp"
-#include "common.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
@@ -17,8 +17,7 @@ public:
 
 private:
   AES_ctx aes_ctx;
-  uint64_t counter{};
-  uint8_t iv[16]{};
+  GarageAlarm::Packet packet;
 };
 
 } // namespace
@@ -42,15 +41,15 @@ int main() {
     sleep_ms(1000);
 
     if (gpio_get(GPIO_INFRA) == 0) {
-      printf("DOOR CLOSED");
+      printf("DOOR CLOSED\n");
       todo = 0;
-      watcher.send_message("close");
+      watcher.send_message(GarageAlarm::DOOR_CLOSE);
       sleep_ms(3000);
       printf("slept\n");
     } else {
-      printf("DOOR OPEN");
+      printf("DOOR OPEN\n");
       if (todo < 2) {
-        watcher.send_message("open");
+        watcher.send_message(GarageAlarm::DOOR_OPEN);
       }
       sleep_ms(3000);
       printf("slept\n");
@@ -60,7 +59,7 @@ int main() {
   return 0;
 }
 
-bool DoorWatcher::init_lora() { return LoRa.begin(868E6); }
+bool DoorWatcher::init_lora() { return LoRa.begin(GarageAlarm::FREQUENCY); }
 
 void DoorWatcher::init_encryption() {
   // NOTE: the key should be replaced!
@@ -71,36 +70,21 @@ void DoorWatcher::init_encryption() {
   //  cc cc cc cc cc cc cc cc : 8 byte is a 64 bit counter
   LoRa.receive();
   for (int i = 0; i < 8; ++i) {
-    iv[i] = LoRa.random();
+    packet.iv[i] = LoRa.random();
   }
   LoRa.sleep();
 }
 
 void DoorWatcher::send_message(std::string message) {
-  iv[8] = (counter >> 56) & 0xFF;
-  iv[9] = (counter >> 48) & 0xFF;
-  iv[10] = (counter >> 40) & 0xFF;
-  iv[11] = (counter >> 32) & 0xFF;
-  iv[12] = (counter >> 24) & 0xFF;
-  iv[13] = (counter >> 16) & 0xFF;
-  iv[14] = (counter >> 8) & 0xFF;
-  iv[15] = (counter >> 0) & 0xFF;
+  printf("Sending message '%s'\n", message.c_str());
 
-  printf("Sending message %d %s", counter, message.c_str());
-
-  AES_ctx_set_iv(&aes_ctx, iv);
+  AES_ctx_set_iv(&aes_ctx, packet.iv);
   AES_CTR_xcrypt_buffer(&aes_ctx, reinterpret_cast<uint8_t *>(message.data()),
                         message.size());
 
-  LoRa.beginPacket();
-  LoRa.write(GarageAlarm::MESSAGE_HEADER);
-  for (const auto c : iv) {
-    LoRa.write(c);
-  }
-  LoRa.print(message);
-  LoRa.endPacket();
+  packet.payload = std::move(message);
+  GarageAlarm::lora_write(LoRa, packet);
+  GarageAlarm::inc_iv_bottom(packet);
 
   LoRa.sleep();
-
-  ++counter;
 }

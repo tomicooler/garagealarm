@@ -1,84 +1,113 @@
+#include "../common/common.h"
 #include "../third_party/pico-lora/src/LoRa-RP2040.h"
 #include "../third_party/tiny-AES-c/aes.hpp"
-#include "common.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
 
-void hexdump(const char *ptr, int buflen) {
-  unsigned char *buf = (unsigned char *)ptr;
-  int i, j;
-  for (i = 0; i < buflen; i += 16) {
-    printf("%06x: ", i);
-    for (j = 0; j < 16; j++)
-      if (i + j < buflen)
-        printf("%02x ", buf[i + j]);
-      else
-        printf("   ");
-    printf(" ");
-    for (j = 0; j < 16; j++)
-      if (i + j < buflen)
-        printf("%c", isprint(buf[i + j]) ? buf[i + j] : '.');
-    printf("\n");
+namespace {
+
+enum class Action { Invalid, DoorOpen, DoorClose };
+
+Action get_action(const std::string &message) {
+  if (message == GarageAlarm::DOOR_OPEN) {
+    return Action::DoorOpen;
+  } else if (message == GarageAlarm::DOOR_CLOSE) {
+    return Action::DoorClose;
+  }
+  return Action::Invalid;
+}
+
+void print_action(Action action) {
+  switch (action) {
+  case Action::DoorOpen:
+    printf("#ACTION_DOOR_OPEN#\n");
+    break;
+  case Action::DoorClose:
+    printf("#ACTION_DOOR_CLOSE#\n");
+    break;
+  default:
+    break;
   }
 }
+
+struct IvTopBottom {
+  uint64_t top{};
+  uint64_t bottom{};
+};
+
+class WatchDog {
+public:
+  explicit WatchDog();
+
+  bool init_lora();
+  void watch();
+
+private:
+  AES_ctx aes_ctx;
+  std::optional<IvTopBottom> iv{};
+};
+
+} // namespace
 
 int main() {
   stdio_init_all();
 
-  for (int i = 0; i < 3; ++i) {
-    printf("i: %d\n", i);
-    sleep_ms(1000);
-  }
+  WatchDog watchdog;
 
-  if (!LoRa.begin(868E6)) {
+  if (!watchdog.init_lora()) {
     printf("Starting LoRa failed!\n");
     return 1;
   }
 
-  printf("LoRa Started\n");
-
-  // TODO: investigate it only receives 1 packet
-  //       might be related to this?
+  // TODO: investigate why it only receives 1 packet using the LoRa.onReceive
   //       https://forums.raspberrypi.com/viewtopic.php?t=300430
   // LoRa.onReceive(onReceive);
   LoRa.receive();
 
-  AES_ctx aes_ctx;
-  AES_init_ctx(&aes_ctx, GarageAlarm::PRESHARED_KEY);
-  static const int HEADER_SIZE = sizeof(GarageAlarm::MESSAGE_HEADER);
-  static const int FRAMING_SIZE = (HEADER_SIZE + AES_BLOCKLEN);
+  watchdog.watch();
+
+  return 0;
+}
+
+WatchDog::WatchDog() { AES_init_ctx(&aes_ctx, GarageAlarm::PRESHARED_KEY); }
+
+bool WatchDog::init_lora() { return LoRa.begin(GarageAlarm::FREQUENCY); }
+
+void WatchDog::watch() {
   while (true) {
-    int packet_size = LoRa.parsePacket();
-    if (packet_size) {
-      printf("Received packet size %d %d \n", packet_size, FRAMING_SIZE);
+    if (const auto data = GarageAlarm::lora_read(LoRa); data) {
+      if (auto packet = GarageAlarm::parse_packet(*data); packet) {
+        GarageAlarm::Packet &p = *packet;
+        if (p.header == GarageAlarm::MESSAGE_HEADER) {
+          AES_ctx_set_iv(&aes_ctx, p.iv);
+          std::string message = std::move(p.payload);
+          AES_CTR_xcrypt_buffer(&aes_ctx,
+                                reinterpret_cast<uint8_t *>(message.data()),
+                                message.size());
 
-      std::string packet;
-      packet.reserve(packet_size);
-      while (LoRa.available()) {
-        packet += (char)LoRa.read();
-      }
-      hexdump(packet.c_str(), packet.size());
-
-      printf("RSSI %d\n", LoRa.packetRssi());
-
-      if (packet_size > FRAMING_SIZE) {
-        if (static_cast<uint8_t>(packet[0]) == GarageAlarm::MESSAGE_HEADER) {
-          AES_ctx_set_iv(&aes_ctx, reinterpret_cast<const uint8_t *>(
-                                       packet.c_str() + HEADER_SIZE));
-          AES_CTR_xcrypt_buffer(
-              &aes_ctx,
-              reinterpret_cast<uint8_t *>(packet.data() + FRAMING_SIZE),
-              packet.size() - FRAMING_SIZE);
-
-          printf("Decrypted: \n");
-          hexdump(packet.c_str() + FRAMING_SIZE, packet.size() - FRAMING_SIZE);
+          Action action = get_action(message);
+          if (action != Action::Invalid) {
+            IvTopBottom iv_received{GarageAlarm::iv_top(p),
+                                    GarageAlarm::iv_bottom(p)};
+            if (iv) {
+              // Non-repudiation as-is
+              // Make sure the manually that the very first message
+              // is read from a trusted source
+              if (iv->top == iv_received.top &&
+                  iv->bottom < iv_received.bottom) {
+                iv->bottom = iv_received.bottom;
+                print_action(action);
+              } else {
+                printf("Message Ignored\n");
+              }
+            } else {
+              iv = std::move(iv_received);
+              print_action(action);
+            }
+          }
         }
       }
     }
   }
-
-  printf("exit\n");
-
-  return 0;
 }
