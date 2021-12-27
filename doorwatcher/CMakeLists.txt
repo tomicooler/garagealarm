@@ -12,7 +12,11 @@ add_executable(doorwatcher
 )
 
 # pull in common dependencies
-target_link_libraries(doorwatcher pico_stdlib hardware_spi hardware_interp)
+target_link_libraries(doorwatcher pico_stdlib hardware_spi hardware_interp hardware_sleep)
 
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(doorwatcher)
+
+# enable usb output, disable uart output
+pico_enable_stdio_usb(doorwatcher 0)
+pico_enable_stdio_uart(doorwatcher 1)

@@ -1,6 +1,9 @@
 #include "../common/common.h"
 #include "../third_party/pico-lora/src/LoRa-RP2040.h"
 #include "../third_party/tiny-AES-c/aes.hpp"
+#include "hardware/regs/io_bank0.h"
+#include "hardware/xosc.h"
+#include "pico/sleep.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
@@ -13,12 +16,29 @@ class DoorWatcher {
 public:
   bool init_lora();
   void init_encryption();
+  void check_door();
+
+private:
+  void dormant_sleep_until();
   void send_message(std::string message);
 
 private:
   AES_ctx aes_ctx;
   GarageAlarm::Packet packet;
 };
+
+static void my_sleep_goto_dormant_until_pin(uint gpio, uint32_t event) {
+  // Configure the appropriate IRQ at IO bank 0
+  assert(gpio < NUM_BANK0_GPIOS);
+
+  gpio_set_dormant_irq_enabled(gpio, event, true);
+
+  xosc_dormant();
+  // Execution stops here until woken up
+
+  // Clear the irq so we can go back to dormant mode again if we want
+  gpio_acknowledge_irq(GPIO_INFRA, event);
+}
 
 } // namespace
 
@@ -33,29 +53,14 @@ int main() {
 
   watcher.init_encryption();
 
-  // TODO deep sleep, wake up on open, etc..
   gpio_init(GPIO_INFRA);
 
-  static int todo = 0;
   while (true) {
-    sleep_ms(1000);
-
-    if (gpio_get(GPIO_INFRA) == 0) {
-      printf("DOOR CLOSED\n");
-      todo = 0;
-      watcher.send_message(GarageAlarm::DOOR_CLOSE);
-      sleep_ms(3000);
-      printf("slept\n");
-    } else {
-      printf("DOOR OPEN\n");
-      if (todo < 2) {
-        watcher.send_message(GarageAlarm::DOOR_OPEN);
-      }
-      sleep_ms(3000);
-      printf("slept\n");
-      ++todo;
-    }
+    printf(">> Checking\n");
+    watcher.check_door();
+    printf("<< Woke up\n");
   }
+
   return 0;
 }
 
@@ -76,7 +81,7 @@ void DoorWatcher::init_encryption() {
 }
 
 void DoorWatcher::send_message(std::string message) {
-  printf("Sending message '%s'\n", message.c_str());
+  printf("    Sending message '%s'\n", message.c_str());
 
   AES_ctx_set_iv(&aes_ctx, packet.iv);
   AES_CTR_xcrypt_buffer(&aes_ctx, reinterpret_cast<uint8_t *>(message.data()),
@@ -87,4 +92,34 @@ void DoorWatcher::send_message(std::string message) {
   GarageAlarm::inc_iv_bottom(packet);
 
   LoRa.sleep();
+}
+
+void DoorWatcher::check_door() {
+  if (gpio_get(GPIO_INFRA) == 0) {
+    printf("  DOOR CLOSE\n");
+    send_message(GarageAlarm::DOOR_CLOSE);
+  } else {
+    printf("  DOOR OPEN\n");
+    send_message(GarageAlarm::DOOR_OPEN);
+  }
+  dormant_sleep_until();
+}
+
+void DoorWatcher::dormant_sleep_until() {
+  printf("Switching to XOSC\n");
+  uart_default_tx_wait_blocking();
+
+  // UART will be reconfigured by sleep_run_from_xosc
+  sleep_run_from_xosc();
+
+  printf("Running from XOSC\n");
+  uart_default_tx_wait_blocking();
+
+  printf("XOSC going dormant\n");
+  stdio_flush();
+  uart_default_tx_wait_blocking();
+
+  my_sleep_goto_dormant_until_pin(
+      GPIO_INFRA, IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_HIGH_BITS |
+                      IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_LOW_BITS);
 }
