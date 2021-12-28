@@ -94,12 +94,18 @@ void WatchDog::watch() {
               // Non-repudiation as-is
               // Make sure the manually that the very first message
               // is read from a trusted source
-              if (iv->top == iv_received.top &&
-                  iv->bottom < iv_received.bottom) {
+              if (iv->top != iv_received.top) {
+                printf("#IV_TOP_MISMATCH#\n");
+              } else if (iv->bottom < iv_received.bottom) {
                 iv->bottom = iv_received.bottom;
                 print_action(action);
               } else {
-                printf("Message Ignored\n");
+                if (iv->bottom == iv_received.bottom) {
+                  printf("Ignoring the duplicated packet #LoRa-pico bug "
+                         "https://github.com/akshayabali/pico-lora/issues/3");
+                } else {
+                  printf("#IV_BOTTOM_OLD#\n");
+                }
               }
             } else {
               iv = std::move(iv_received);
