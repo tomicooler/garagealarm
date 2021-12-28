@@ -1,0 +1,29 @@
+[project]
+name = "garagenotifier"
+version = "0.1"
+description = ""
+authors = [
+    {name = "Tamas Domok", email = "domoktamas@gmail.com"},
+]
+dependencies = [
+    "requests>=2.26.0",
+    "python-decouple>=3.5",
+    "pySerial>=3.5",
+]
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+
+[project.urls]
+homepage = "https://github.com/tomicooler/garagealarm"
+
+[project.optional-dependencies]
+[tool]
+[tool.pdm]
+[tool.pdm.dev-dependencies]
+garagenotifier = [
+    "black>=21.12b0",
+]
+
+[build-system]
+requires = ["pdm-pep517"]
+build-backend = "pdm.pep517.api"
