@@ -12,7 +12,7 @@ DEVICE_TOKEN = config("MY_GARAGE_DEVICE_TOKEN")
 SERIAL_INTERFACE = config("MY_GARAGE_SERIAL_INTERFACE", default="/dev/ttyACM0")
 
 
-def send_notification(body: str, state: str):
+def send_notification(body: str, action: str):
     timestamp = int(time.time() * 1000)
 
     headers = {
@@ -29,13 +29,13 @@ def send_notification(body: str, state: str):
         "priority": "high",
         "data": {
             "timestamp": timestamp,
-            "state": state,
+            "action": action,
         },
     }
 
     print(
-        "Sending message body='{}' state='{}' timestamp='{}'".format(
-            body, state, timestamp
+        "Sending message body='{}' action='{}' timestamp='{}'".format(
+            body, action, timestamp
         )
     )
 
