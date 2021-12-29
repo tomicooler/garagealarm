@@ -1,59 +1,84 @@
 package com.tomicooler.MyGarage;
 
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
 
+    private EventViewModel mEventViewModel;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        String channelId = getString(R.string.default_notification_channel_id);
-        String channelName = getString(R.string.default_notification_channel_name);
-        NotificationManager notificationManager =
-                getSystemService(NotificationManager.class);
-        notificationManager.createNotificationChannel(new NotificationChannel(channelId,
-                channelName, NotificationManager.IMPORTANCE_LOW));
+        RecyclerView recyclerView = findViewById(R.id.recyclerview);
+        final EventListAdapter adapter = new EventListAdapter(new EventListAdapter.EventDiff());
+        recyclerView.setAdapter(adapter);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-
-        if (getIntent().getExtras() != null) {
-            for (String key : getIntent().getExtras().keySet()) {
-                Object value = getIntent().getExtras().get(key);
-                Log.d(TAG, "Key: " + key + " Value: " + value);
-            }
-        }
+        mEventViewModel = new ViewModelProvider(this).get(EventViewModel.class);
+        mEventViewModel.getEvents().observe(this, adapter::submitList);
 
         FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(new OnCompleteListener<String>() {
-                    @Override
-                    public void onComplete(@NonNull Task<String> task) {
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                        return;
+                    }
+                    task.getResult();
+                });
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.send_fcm_token) {
+            FirebaseMessaging.getInstance().getToken()
+                    .addOnCompleteListener(task -> {
                         if (!task.isSuccessful()) {
                             Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                            Toast.makeText(MainActivity.this, R.string.fcm_token_fail, Toast.LENGTH_SHORT).show();
                             return;
                         }
 
-                        // Get new FCM registration token
                         String token = task.getResult();
 
-                        // Log and toast
-                        String msg = getString(R.string.msg_token_fmt, token);
-                        Log.d(TAG, msg);
-                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
-                    }
-                });
+                        Intent intent = new Intent(Intent.ACTION_SEND);
+                        intent.setType("text/plain");
+                        intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.email_title));
+                        intent.putExtra(Intent.EXTRA_TEXT, token);
+                        startActivity(Intent.createChooser(intent, getString(R.string.email_title)));
+                    });
+        }
+
+        if (item.getItemId() == R.id.delete_history) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage(R.string.are_you_sure).setPositiveButton(R.string.yes, (dialog, id) -> mEventViewModel.deleteAll())
+                    .setNegativeButton(R.string.no, (dialog, id) -> {
+                    }).show();
+        }
+
+        return super.onOptionsItemSelected(item);
     }
+
 }
