@@ -32,9 +32,10 @@ Internet access is needed here.
 
 **app**
 
-An android application that receives the notifications, shows them to te user,
+An android application that receives the notifications, shows them to the user,
 and keeps track of the door state as there is no server in this architecture.
 
+Set the notifications to Alerting mode in the Android <a href="https://support.google.com/android/answer/9079661?hl=en#zippy=%2Cchoose-if-notifications-interrupt-you-or-stay-silent">Settings</a> application.
 
 Communication
 -------------
