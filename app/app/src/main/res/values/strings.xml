@@ -5,8 +5,8 @@
     <string name="default_notification_channel_name" translatable="true">Events</string>
     <string name="msg_token_fmt" translatable="false">FCM registration Token: %s</string>
     <string name="fcm_message">Action</string>
-    <string name="action_open">The door is opened</string>
-    <string name="action_close">The door is closed</string>
+    <string name="action_open">open</string>
+    <string name="action_close">close</string>
     <string name="action_iv_top_mismatch">Security#1: restart the notifier and verify doorwatcher</string>
     <string name="iv_bottom_old">Security#2: probably someone else resent a message</string>
     <string name="new_fcm_token">New FCM token - update the notifier with it</string>
