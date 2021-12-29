@@ -12,7 +12,7 @@ DEVICE_TOKEN = config("MY_GARAGE_DEVICE_TOKEN")
 SERIAL_INTERFACE = config("MY_GARAGE_SERIAL_INTERFACE", default="/dev/ttyACM0")
 
 
-def send_notification(body: str, action: str):
+def send_notification(action: str):
     timestamp = int(time.time() * 1000)
 
     headers = {
@@ -21,11 +21,6 @@ def send_notification(body: str, action: str):
     }
 
     body = {
-        "notification": {
-            "title": "Garage Alarm",
-            "body": body,
-            "sound": "default",
-        },
         "to": DEVICE_TOKEN,
         "priority": "high",
         "data": {
@@ -34,11 +29,7 @@ def send_notification(body: str, action: str):
         },
     }
 
-    print(
-        "Sending message body='{}' action='{}' timestamp='{}'".format(
-            body, action, timestamp
-        )
-    )
+    print("Sending message action='{}' timestamp='{}'".format(action, timestamp))
 
     response = requests.post(
         "https://fcm.googleapis.com/fcm/send", headers=headers, data=json.dumps(body)
@@ -59,10 +50,10 @@ if __name__ == "__main__":
     while True:
         line = ser.readline()
         if line.find(b"#ACTION_DOOR_OPEN#") != -1:
-            send_notification("The door is open!", "open")
+            send_notification("open")
         elif line.find(b"#ACTION_DOOR_CLOSE#") != -1:
-            send_notification("The door is closed!", "close")
+            send_notification("close")
         elif line.find(b"#IV_TOP_MISMATCH#") != -1:
-            send_notification("Unknown doorwatcher ID!", "iv_top_mismatch")
+            send_notification("iv_top_mismatch")
         elif line.find(b"#IV_BOTTOM_OLD#") != -1:
-            send_notification("Reused doorwatcher message!", "iv_bottom_old")
+            send_notification("iv_bottom_old")
