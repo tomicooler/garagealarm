@@ -63,6 +63,6 @@ if __name__ == "__main__":
         elif line.find(b"#ACTION_DOOR_CLOSE#") != -1:
             send_notification("The door is closed!", "close")
         elif line.find(b"#IV_TOP_MISMATCH#") != -1:
-            send_notification("Unknown doorwatcher ID!", "")
+            send_notification("Unknown doorwatcher ID!", "iv_top_mismatch")
         elif line.find(b"#IV_BOTTOM_OLD#") != -1:
-            send_notification("Reused doorwatcher message!", "")
+            send_notification("Reused doorwatcher message!", "iv_bottom_old")
