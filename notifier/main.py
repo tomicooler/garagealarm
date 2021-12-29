@@ -24,6 +24,7 @@ def send_notification(body: str, action: str):
         "notification": {
             "title": "Garage Alarm",
             "body": body,
+            "sound": "default",
         },
         "to": DEVICE_TOKEN,
         "priority": "high",
