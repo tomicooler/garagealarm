@@ -42,7 +42,7 @@ std::optional<Packet> parse_packet(const std::vector<uint8_t> &bytes);
 #ifdef NDEBUG
 constexpr bool ensure_replaced() {
   constexpr uint8_t DONT_USE_THIS[] = "replacethis";
-  for (int i = 0; i < sizeof(DONT_USE_THIS); ++i) {
+  for (unsigned int i = 0; i < sizeof(DONT_USE_THIS); ++i) {
     if (PRESHARED_KEY[i] != DONT_USE_THIS[i]) {
       return true;
     }
