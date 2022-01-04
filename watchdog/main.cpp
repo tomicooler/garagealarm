@@ -113,6 +113,7 @@ void WatchDog::watch() {
                   printf("#IV_BOTTOM_OLD#\n");
                 }
               }
+              stdio_flush();
             } else {
               iv = std::move(iv_received);
               print_action(action);
