@@ -1,0 +1,14 @@
+[Unit]
+Description=GarageAlarm Notifier
+After=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/pico/garagealarm/notifier
+ExecStart=/home/pi/pico/garagealarm/notifier/run.sh
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

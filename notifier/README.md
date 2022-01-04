@@ -28,3 +28,12 @@ Configuring using environment variables or an env file.
 MY_GARAGE_SERVER_KEY="fcm server key that you download from your Firebase console"
 MY_GARAGE_DEVICE_TOKEN="device token id that your device received from the MyGarage android app"
 ```
+
+Deploying on a Raspberry Pi
+```
+sudo cp garagealarm.service /lib/systemd/system/.
+sudo systemctl start garagealarm.service
+sudo systemctl status garagealarm.service
+journalctl -u garagealarm.service
+sudo systemctl enable garagealarm.service
+```
