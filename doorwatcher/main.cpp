@@ -70,6 +70,9 @@ void DoorWatcher::init_encryption() {
   // NOTE: the key should be replaced!
   AES_init_ctx(&aes_ctx, GarageAlarm::PRESHARED_KEY);
 
+  LoRa.setSpreadingFactor(12);
+  LoRa.setSignalBandwidth(125E3);
+
   // IV 16 byte [ xx xx xx xx xx xx xx xx cc cc cc cc cc cc cc cc ]
   //  xx xx xx xx xx xx xx xx : random 8 byte using LoRa Wideband RSSI
   //  cc cc cc cc cc cc cc cc : 8 byte is a 64 bit counter

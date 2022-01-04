@@ -60,6 +60,9 @@ int main() {
     return 1;
   }
 
+  LoRa.setGain(6);
+  LoRa.setSpreadingFactor(12);
+
   // TODO: investigate why it only receives 1 packet using the LoRa.onReceive
   //       https://forums.raspberrypi.com/viewtopic.php?t=300430
   // LoRa.onReceive(onReceive);
