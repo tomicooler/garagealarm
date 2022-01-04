@@ -10,7 +10,23 @@ class LoRaClass;
 
 namespace Utils {
 
-static void hexdump(const void *const ptr, int buflen);
+static void hexdump(const void *const ptr, int buflen) {
+  const unsigned char *buf = reinterpret_cast<const unsigned char *>(ptr);
+  int i, j;
+  for (i = 0; i < buflen; i += 16) {
+    printf("%06x: ", i);
+    for (j = 0; j < 16; j++)
+      if (i + j < buflen)
+        printf("%02x ", buf[i + j]);
+      else
+        printf("   ");
+    printf(" ");
+    for (j = 0; j < 16; j++)
+      if (i + j < buflen)
+        printf("%c", isprint(buf[i + j]) ? buf[i + j] : '.');
+    printf("\n");
+  }
+}
 
 } // namespace Utils
 
