@@ -10,6 +10,9 @@ namespace {
 enum class Action { Invalid, DoorOpen, DoorClose };
 
 Action get_action(const std::string &message) {
+  printf(">> decoded message >>\n");
+  Utils::hexdump(message.c_str(), message.size());
+  printf("<< decoded message <<\n");
   if (message == GarageAlarm::DOOR_OPEN) {
     return Action::DoorOpen;
   } else if (message == GarageAlarm::DOOR_CLOSE) {
