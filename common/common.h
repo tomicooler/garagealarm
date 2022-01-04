@@ -38,7 +38,7 @@ static constexpr uint8_t PRESHARED_KEY[] = "replacethis";
 
 static constexpr uint8_t MESSAGE_HEADER = 0x42;
 
-static constexpr char DOOR_OPEN[] = "open";
+static constexpr char DOOR_OPEN[] = "open_";
 static constexpr char DOOR_CLOSE[] = "close";
 
 struct Packet {
