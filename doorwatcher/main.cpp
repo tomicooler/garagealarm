@@ -72,6 +72,7 @@ void DoorWatcher::init_encryption() {
 
   LoRa.setSpreadingFactor(12);
   LoRa.setSignalBandwidth(125E3);
+  LoRa.setTxPower(20);
   LoRa.enableCrc();
 
   // IV 16 byte [ xx xx xx xx xx xx xx xx cc cc cc cc cc cc cc cc ]
