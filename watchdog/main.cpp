@@ -118,6 +118,7 @@ void WatchDog::watch() {
             } else {
               iv = std::move(iv_received);
               print_action(action);
+              stdio_flush();
             }
           }
         }
