@@ -47,6 +47,9 @@ public:
   void watch();
 
 private:
+  void handle_packet(const GarageAlarm::Packet &packet);
+
+private:
   AES_ctx aes_ctx;
   std::optional<IvTopBottom> iv{};
 };
@@ -57,7 +60,6 @@ int main() {
   stdio_init_all();
 
   WatchDog watchdog;
-
   if (!watchdog.init_lora()) {
     printf("Starting LoRa failed!\n");
     return 1;
@@ -67,11 +69,7 @@ int main() {
   LoRa.setSpreadingFactor(12);
   LoRa.enableCrc();
 
-  // TODO: investigate why it only receives 1 packet using the LoRa.onReceive
-  //       https://forums.raspberrypi.com/viewtopic.php?t=300430
-  // LoRa.onReceive(onReceive);
   LoRa.receive();
-
   watchdog.watch();
 
   return 0;
@@ -85,44 +83,43 @@ void WatchDog::watch() {
   while (true) {
     if (const auto data = GarageAlarm::lora_read(LoRa); data) {
       if (auto packet = GarageAlarm::parse_packet(*data); packet) {
-        GarageAlarm::Packet &p = *packet;
-        if (p.header == GarageAlarm::MESSAGE_HEADER) {
-          AES_ctx_set_iv(&aes_ctx, p.iv);
-          std::string message = std::move(p.payload);
-          AES_CTR_xcrypt_buffer(&aes_ctx,
-                                reinterpret_cast<uint8_t *>(message.data()),
-                                message.size());
-
-          Action action = get_action(message);
-          if (action != Action::Invalid) {
-            IvTopBottom iv_received{GarageAlarm::iv_top(p),
-                                    GarageAlarm::iv_bottom(p)};
-            if (iv) {
-              // Non-repudiation as-is
-              // Make sure the manually that the very first message
-              // is read from a trusted source
-              if (iv->top != iv_received.top) {
-                printf("#IV_TOP_MISMATCH#\n");
-              } else if (iv->bottom < iv_received.bottom) {
-                iv->bottom = iv_received.bottom;
-                print_action(action);
-              } else {
-                if (iv->bottom == iv_received.bottom) {
-                  printf("Ignoring the duplicated packet #LoRa-pico bug "
-                         "https://github.com/akshayabali/pico-lora/issues/3");
-                } else {
-                  printf("#IV_BOTTOM_OLD#\n");
-                }
-              }
-              stdio_flush();
-            } else {
-              iv = std::move(iv_received);
-              print_action(action);
-              stdio_flush();
-            }
-          }
-        }
+        handle_packet(*packet);
       }
     }
+  }
+}
+
+void
+WatchDog::handle_packet(const GarageAlarm::Packet &packet)
+{
+  if (packet.header == GarageAlarm::MESSAGE_HEADER) {
+    AES_ctx_set_iv(&aes_ctx, packet.iv);
+    std::string message = std::move(packet.payload);
+    AES_CTR_xcrypt_buffer(&aes_ctx,
+                          reinterpret_cast<uint8_t *>(message.data()),
+                          message.size());
+
+    Action action = get_action(message);
+    if (action != Action::Invalid) {
+      IvTopBottom iv_received{GarageAlarm::iv_top(packet),
+                              GarageAlarm::iv_bottom(packet)};
+      if (iv) {
+        // Non-repudiation as-is
+        // Make sure the manually that the very first message
+        // is read from a trusted source
+        if (iv->top != iv_received.top) {
+          printf("#IV_TOP_MISMATCH#\n");
+        } else if (iv->bottom < iv_received.bottom) {
+          iv->bottom = iv_received.bottom;
+          print_action(action);
+        } else {
+          printf("#IV_BOTTOM_OLD#\n");
+        }
+      } else {
+        iv = std::move(iv_received);
+        print_action(action);
+      }
+    }
+    stdio_flush();
   }
 }

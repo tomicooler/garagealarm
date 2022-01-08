@@ -26,7 +26,7 @@ void GarageAlarm::lora_write(LoRaClass &lora, const Packet &packet) {
 }
 
 std::optional<std::vector<uint8_t>> GarageAlarm::lora_read(LoRaClass &lora) {
-  int packet_size = lora.parsePacket();
+  int packet_size = LoRa.parsePacket();
   if (packet_size) {
     printf("Received packet size: %d\n", packet_size);
 
@@ -38,6 +38,8 @@ std::optional<std::vector<uint8_t>> GarageAlarm::lora_read(LoRaClass &lora) {
     Utils::hexdump(data.data(), data.size());
 
     printf("RSSI %d\n", lora.packetRssi());
+    printf("SNR %f\n", lora.packetSnr());
+    printf("FreqError %ld\n", lora.packetFrequencyError());
 
     return data;
   }
