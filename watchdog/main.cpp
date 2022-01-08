@@ -65,7 +65,6 @@ int main() {
     return 1;
   }
 
-  LoRa.setGain(6);
   LoRa.setSpreadingFactor(12);
   LoRa.enableCrc();
 
