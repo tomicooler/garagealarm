@@ -51,6 +51,12 @@ int main() {
     return 1;
   }
 
+  LoRa.setSpreadingFactor(12);
+  LoRa.setSignalBandwidth(125E3);
+  LoRa.setCodingRate4(8);
+  LoRa.setTxPower(20);
+  LoRa.enableCrc();
+
   watcher.init_encryption();
 
   gpio_init(GPIO_INFRA);
@@ -69,12 +75,6 @@ bool DoorWatcher::init_lora() { return LoRa.begin(GarageAlarm::FREQUENCY); }
 void DoorWatcher::init_encryption() {
   // NOTE: the key should be replaced!
   AES_init_ctx(&aes_ctx, GarageAlarm::PRESHARED_KEY);
-
-  LoRa.setSpreadingFactor(12);
-  LoRa.setSignalBandwidth(125E3);
-  LoRa.setCodingRate4(8);
-  LoRa.setTxPower(20);
-  LoRa.enableCrc();
 
   // IV 16 byte [ xx xx xx xx xx xx xx xx cc cc cc cc cc cc cc cc ]
   //  xx xx xx xx xx xx xx xx : random 8 byte using LoRa Wideband RSSI
