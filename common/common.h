@@ -32,7 +32,7 @@ static void hexdump(const void *const ptr, int buflen) {
 
 namespace GarageAlarm {
 
-static constexpr long FREQUENCY = 868E6;
+static constexpr long FREQUENCY = 433E6;
 
 static constexpr uint8_t PRESHARED_KEY[] = "replacethis";
 
