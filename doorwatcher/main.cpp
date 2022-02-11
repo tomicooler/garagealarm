@@ -53,7 +53,6 @@ int main() {
 
   LoRa.setSpreadingFactor(12);
   LoRa.setSignalBandwidth(125E3);
-  LoRa.setCodingRate4(8);
   LoRa.setTxPower(20);
   LoRa.enableCrc();
 
