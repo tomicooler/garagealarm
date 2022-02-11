@@ -10,10 +10,10 @@ it would be nice to know if I closed the door..., How Hard Can It Be?
 
 **doorwatcher**
 
-A component built with a Raspberry Pico and infra sensor and a LoRa module.
-The infra sensor is used to detect whether the door is open or closed.
+A component built with a Raspberry Pico and a magnetic sensor and a LoRa module.
+The magnetic reed switch is used to detect whether the door is open or closed.
 To save battery the Pico is mostly in dormant mode (deep sleep), it wakes up
-when the infra sensor's output changes, then sends an open/close message with LoRa.
+when the magnetic switch changes, then sends an open/close message with LoRa.
 I power this component with 3x AA batteries.
 
 
@@ -86,7 +86,7 @@ Hardware
 
  - 2x Raspberry Pico
  - 2x RFM95W LoRa module
- - 1x Infra Sensor HW-201A
+ - 1x Magnetic Reed Switch MC-38W Normally Closed
 
 
 **Pin Layouts**
@@ -105,9 +105,8 @@ Hardware
 | GPIO 10 | DIO1 / G1 |
 
 
-| Raspberry Pi Pico | Infra Sensor HW-201A |
-| ----------------- | -------------------- |
-| 3.3V | VCC |
+| Raspberry Pi Pico | Magnetic Switch MC-38W |
+| ----------------- | ---------------------- |
 | GND | GND |
 | GPIO 22 | OUT |
 

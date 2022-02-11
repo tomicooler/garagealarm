@@ -10,7 +10,7 @@
 
 namespace {
 
-static constexpr uint GPIO_INFRA = 22; // GP22 - PIN 29
+static constexpr uint GPIO_MAGNETIC = 22; // GP22 - PIN 29
 
 class DoorWatcher {
 public:
@@ -37,7 +37,7 @@ static void my_sleep_goto_dormant_until_pin(uint gpio, uint32_t event) {
   // Execution stops here until woken up
 
   // Clear the irq so we can go back to dormant mode again if we want
-  gpio_acknowledge_irq(GPIO_INFRA, event);
+  gpio_acknowledge_irq(GPIO_MAGNETIC, event);
 }
 
 } // namespace
@@ -59,7 +59,8 @@ int main() {
 
   watcher.init_encryption();
 
-  gpio_init(GPIO_INFRA);
+  gpio_init(GPIO_MAGNETIC);
+  gpio_set_pulls(GPIO_MAGNETIC, true, false);
 
   while (true) {
     printf(">> Checking\n");
@@ -101,7 +102,7 @@ void DoorWatcher::send_message(std::string message) {
 }
 
 void DoorWatcher::check_door() {
-  if (gpio_get(GPIO_INFRA) == 0) {
+  if (gpio_get(GPIO_MAGNETIC) == 0) {
     printf("  DOOR CLOSE\n");
     send_message(GarageAlarm::DOOR_CLOSE);
   } else {
@@ -126,6 +127,6 @@ void DoorWatcher::dormant_sleep_until() {
   uart_default_tx_wait_blocking();
 
   my_sleep_goto_dormant_until_pin(
-      GPIO_INFRA, IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_HIGH_BITS |
+      GPIO_MAGNETIC, IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_HIGH_BITS |
                       IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_LOW_BITS);
 }
