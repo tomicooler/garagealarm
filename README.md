@@ -2,25 +2,30 @@ GarageAlarm
 ===========
 
 GarageAlarm can detect whether the garage door is open or closed.
-The garage that I rent is about 500-1000 meters from the apartment,
+The garage that I rent is about 320 meters from the apartment,
 it would be nice to know if I closed the door..., How Hard Can It Be?
+
+
+<a href="https://docs.google.com/presentation/d/1tIYUefcGcdnDLyIjWLCoXbDT66C93z82hiz6jU8Zyz8">Veszprem Technology Meetup Slides with Pictures and useful Links</a>
+
+
 
 <img src="doc/architecture.png" width="300"/>
 
 
 **doorwatcher**
 
-A component built with a Raspberry Pico and a magnetic sensor and a LoRa module.
+A component built with a Raspberry Pico, a magnetic sensor and a LoRa module.
 The magnetic reed switch is used to detect whether the door is open or closed.
 To save battery the Pico is mostly in dormant mode (deep sleep), it wakes up
-when the magnetic switch changes, then sends an open/close message with LoRa.
-I power this component with 3x AA batteries.
+when the magnetic switch changes, sends an open_/close message using LoRa.
+Powered by 3x AA batteries.
 
 
 **watchdog**
 
 A component built with a Raspberry Pico and a LoRa module. It receives LoRa packets
-and print some action words when the doorwatcher sends a message.
+and prints action words to the USB serial, e.g.: #ACTION_DOOR_OPEN#.
 
 
 **notifier**
@@ -35,7 +40,7 @@ Internet access is needed here.
 An android application that receives the notifications, shows them to the user,
 and keeps track of the door state as there is no server in this architecture.
 
-Set the notifications to Alerting mode in the Android <a href="https://support.google.com/android/answer/9079661?hl=en#zippy=%2Cchoose-if-notifications-interrupt-you-or-stay-silent">Settings</a> application.
+NOTE: set the notifications to Alerting mode in the Android <a href="https://support.google.com/android/answer/9079661?hl=en#zippy=%2Cchoose-if-notifications-interrupt-you-or-stay-silent">Settings</a> application.
 
 Communication
 -------------
@@ -55,37 +60,52 @@ struct Packet {
 };
 ```
 
-The packets are **encrypted** using AES-128 CTR. The AES key must be kept as secret! The keys are installed, preshared on
-the devices. The initialization vector (IV) is sent unencrypted in the packet, the same IV key pair should be used
-only at once.
+The payload is **encrypted** using AES-128/CTR. The AES key must be kept as secret! The key is known only by
+the sender and receiver. The initialization vector (IV) is sent unencrypted in the packet, the same IV and key pair must be used
+only once.
 
 **IV** 
 ```
 IV 16 byte [ xx xx xx xx xx xx xx xx cc cc cc cc cc cc cc cc ]
-  xx xx xx xx xx xx xx xx : Random 8 byte is gathered using LoRa Wideband RSSSI when the device starts, not changed while live. [iv_top]
+  xx xx xx xx xx xx xx xx : Random 8 byte is gathered using LoRa Wideband RSSI when the device starts, not changed while live. [iv_top]
   cc cc cc cc cc cc cc cc : A 8 byte counter that is incremented at every message. [iv_bottom]
 ```
 
-Non repudiation is as is, since the communication is not duplex. The watchdog (receiver) will save the iv_top at the
-first message and will ignore other messages with different iv_tops. The iv_bottom is also checked: it must be bigger than
-the previously received. The payloads are fixed here (either "open" or "close"), so it can be checked for validity.
+Example: open_
+```
+000000: 42 08 07 16 0e 0f 07 0f 05 00 00 00 00 00 00 00  B...............
+000010: c0 64 25 66 cb 25                                .d%f.%
+```
+
+Example: close
+```
+000000: 42 08 07 16 0e 0f 07 0f 05 00 00 00 00 00 00 00  B...............
+000010: c1 d3 d6 92 c1 22                                ....."
+```
+
+Security properties:
+ - **Non repudiation:** No, the receiver has the key, so it can forge any message.
+ - **Data Integrity:** ?Yes?, old messages can’t be played back as long as the receiver is not restarted, message loss could be detected.
+ - **Authentication:** ?Yes?, as long as the receiver is not restarted, and sender is verified manually at the first message.
+ - **Confidentiality:** Yes, as the key is only known to receiver and sender, but it’s either close or open_ alternately...
+
+Non repetition is as is, since the communication is not duplex. The watchdog (receiver) saves the iv_top at the
+first message and ignores other messages with different iv_tops. The iv_bottom is also checked: it must be bigger than
+the previously received. The payloads are fixed here (either "open_" or "close"), so it can be checked for validity.
 
 
-Idea, if communication were duplex:
+Idea, if communication were duplex (AES-128/GCM):
 
-A -> B: Hey! [random_A1]
-B -> A: Sup? [random_A1, random_B1]
-A -> B: This is what! [random_B1]
-
-Then Non repudiation, Confidentiality, Authentication are all checked as long the keys are only known between A&B. Data Integrity GCM or some MAC?
-(Correct me if I'm wrong here.)
+ 1. A -> B: Hey! [random_A1]
+ 2. B -> A: Sup? [random_A1, random_B1]
+ 3. A -> B: This is what! [random_B1]
 
 
 Hardware
 --------
 
  - 2x Raspberry Pico
- - 2x RFM95W LoRa module
+ - 2x RFM95W LoRa module 868 MHz / 2x RA02-LORA-SX1278 module 433 MHz
  - 1x Magnetic Reed Switch MC-38W Normally Closed
 
 
@@ -136,7 +156,7 @@ Then download the **google-services.json** to app/app directory from your Fireba
 Build the project with Android Studio.
 
 
-Developing workflow tips with a Raspberry Pi 3B
+Developer workflow tips with a Raspberry Pi 3B
 
 ```
 ssh pi@RASPBERRY_IP

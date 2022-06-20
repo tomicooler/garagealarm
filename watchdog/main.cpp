@@ -103,7 +103,7 @@ WatchDog::handle_packet(const GarageAlarm::Packet &packet)
       IvTopBottom iv_received{GarageAlarm::iv_top(packet),
                               GarageAlarm::iv_bottom(packet)};
       if (iv) {
-        // Non-repudiation as-is
+        // Non-repetition as-is
         // Make sure the manually that the very first message
         // is read from a trusted source
         if (iv->top != iv_received.top) {
