@@ -65,7 +65,9 @@ int main() {
     return 1;
   }
 
-  LoRa.setSpreadingFactor(12);
+  LoRa.setSpreadingFactor(GarageAlarm::SPREADING_FACTOR);
+  LoRa.setSignalBandwidth(GarageAlarm::BANDWIDTH);
+  LoRa.setCodingRate4(GarageAlarm::CODING_RATE);
   LoRa.enableCrc();
 
   LoRa.receive();
