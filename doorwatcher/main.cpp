@@ -53,8 +53,8 @@ int main() {
 
   LoRa.setSpreadingFactor(GarageAlarm::SPREADING_FACTOR);
   LoRa.setSignalBandwidth(GarageAlarm::BANDWIDTH);
-  LoRa.setCodingRate4(GarageAlarm::CODING_RATE);
-  LoRa.setTxPower(17);
+  LoRa.setCodingRate4(8);
+  LoRa.setTxPower(20);
   LoRa.enableCrc();
 
   watcher.init_encryption();

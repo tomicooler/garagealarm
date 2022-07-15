@@ -34,8 +34,7 @@ namespace GarageAlarm {
 
 static constexpr long FREQUENCY = 433E6;
 static constexpr long BANDWIDTH = 125E3;
-static constexpr int SPREADING_FACTOR = 10;
-static constexpr int CODING_RATE = 5;
+static constexpr int SPREADING_FACTOR = 12;
 
 static constexpr uint8_t PRESHARED_KEY[] = "replacethis";
 
