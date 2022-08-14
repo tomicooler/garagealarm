@@ -9,8 +9,16 @@ it would be nice to know if I closed the door..., How Hard Can It Be?
 <a href="https://docs.google.com/presentation/d/1tIYUefcGcdnDLyIjWLCoXbDT66C93z82hiz6jU8Zyz8">Veszprem Technology Meetup Slides with Pictures and useful Links</a>
 
 
+**Variant A**
+  * 2x Raspberry Pico
+  * 1x Raspberry Pi 3 or something with Internet Connection
+<img src="doc/architecture.png"/>
 
-<img src="doc/architecture.png" width="300"/>
+
+**Variant B**
+  * 1x Raspberry Pico
+  * 1x Raspberry Pico W
+<img src="doc/architecture-pico-w.png"/>
 
 
 **doorwatcher**
@@ -24,8 +32,13 @@ Powered by 3x AA batteries.
 
 **watchdog**
 
-A component built with a Raspberry Pico and a LoRa module. It receives LoRa packets
+Variant A: A component built with a Raspberry Pico and a LoRa module. It receives LoRa packets
 and prints action words to the USB serial, e.g.: #ACTION_DOOR_OPEN#.
+
+Variant B: A component built with a Raspberry Pico W and a LoRa module. It receives LoRa packets
+and and sends Firebase Push Messages. The lwIP stack with Mbed-TLS is used to send
+HTTP request to fcm.googleapis.com. DNS lookup and NTP time synchronization is implemented
+too.
 
 
 **notifier**
@@ -139,10 +152,15 @@ Building
 
 Setup your pico build environemnt then:
 ```
-mkdir build && cd build
-cmake ..
-make
-# copy the the uf2 files to your picos
+# Variant A
+mkdir build && cd build && cmake .. && make
+# Then copy the uf2 files to your picos
+
+# Variant B
+#   Use my pico-sdk fork: https://github.com/tomicooler/pico-sdk/commit/cefa36599c5734fc84ffccfe75869680f1b727d1
+cp watchdog/watchdog-config.h.example watchdog/watchdog-config.h # edit the config file
+mkdir build && cd build && cmake -DPICO_BOARD=pico_w .. && make
+# Then copy the  watchdog.uf2 file to your pico w
 ```
 
 **notifier**
