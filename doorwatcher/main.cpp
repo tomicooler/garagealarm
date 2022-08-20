@@ -1,16 +1,18 @@
 #include "../common/common.h"
 #include "../third_party/pico-lora/src/LoRa-RP2040.h"
 #include "../third_party/tiny-AES-c/aes.hpp"
-#include "hardware/regs/io_bank0.h"
-#include "hardware/xosc.h"
-#include "pico/sleep.h"
-#include "pico/stdlib.h"
+#include <hardware/regs/io_bank0.h>
+#include <hardware/xosc.h>
+#include <pico/sleep.h>
+#include <pico/stdlib.h>
+#include <boards/pico.h>
 #include <stdio.h>
 #include <string.h>
 
 namespace {
 
 static constexpr uint GPIO_MAGNETIC = 22; // GP22 - PIN 29
+static constexpr uint LED_PIN = PICO_DEFAULT_LED_PIN;
 
 class DoorWatcher {
 public:
@@ -61,6 +63,8 @@ int main() {
 
   gpio_init(GPIO_MAGNETIC);
   gpio_set_pulls(GPIO_MAGNETIC, true, false);
+  gpio_init(LED_PIN);
+  gpio_set_dir(LED_PIN, GPIO_OUT);
 
   while (true) {
     printf(">> Checking\n");
@@ -102,6 +106,7 @@ void DoorWatcher::send_message(std::string message) {
 }
 
 void DoorWatcher::check_door() {
+  gpio_put(LED_PIN, 1);
   if (gpio_get(GPIO_MAGNETIC) == 0) {
     printf("  DOOR CLOSE\n");
     send_message(GarageAlarm::DOOR_CLOSE);
@@ -109,6 +114,7 @@ void DoorWatcher::check_door() {
     printf("  DOOR OPEN\n");
     send_message(GarageAlarm::DOOR_OPEN);
   }
+  gpio_put(LED_PIN, 0);
   dormant_sleep_until();
 }
 
