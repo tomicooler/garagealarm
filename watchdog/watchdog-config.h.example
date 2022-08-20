@@ -1,0 +1,4 @@
+constexpr char WIFI_SSID[] = "wifi-ssid";
+constexpr char WIFI_PASSWORD[] = "wifi-password";
+constexpr char FIREBASE_SERVER_KEY[] = "server-key";
+constexpr char FIREBASE_DEVICE_TOKEN[] = "device-token";
