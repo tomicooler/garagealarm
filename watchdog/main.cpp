@@ -150,6 +150,13 @@ int main() {
   }
   printf("Connected to WiFi\n");
 
+  for (int i = 0; i < 10; ++i) {
+    Poller::led_on();
+    sleep_ms(250);
+    Poller::led_off();
+    sleep_ms(250);
+  }
+
   Ntp ntp;
   Dns dns;
   TcpClient client;
