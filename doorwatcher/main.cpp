@@ -1,11 +1,12 @@
 #include "../common/common.h"
 #include "../third_party/pico-lora/src/LoRa-RP2040.h"
 #include "../third_party/tiny-AES-c/aes.hpp"
+#include <boards/pico.h>
 #include <hardware/regs/io_bank0.h>
 #include <hardware/xosc.h>
+#include <optional>
 #include <pico/sleep.h>
 #include <pico/stdlib.h>
-#include <boards/pico.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -13,6 +14,8 @@ namespace {
 
 static constexpr uint GPIO_MAGNETIC = 22; // GP22 - PIN 29
 static constexpr uint LED_PIN = PICO_DEFAULT_LED_PIN;
+
+enum class DoorState : uint8_t { Open, Close };
 
 class DoorWatcher {
 public:
@@ -27,6 +30,8 @@ private:
 private:
   AES_ctx aes_ctx;
   GarageAlarm::Packet packet;
+  std::optional<DoorState> state;
+  uint64_t last_time{0};
 };
 
 static void my_sleep_goto_dormant_until_pin(uint gpio, uint32_t event) {
@@ -105,15 +110,30 @@ void DoorWatcher::send_message(std::string message) {
   LoRa.sleep();
 }
 
+namespace {
+const char *as_string(const DoorState state) {
+  return state == DoorState::Close ? "CLOSE" : "OPEN";
+}
+constexpr uint64_t seconds(uint64_t sec) { return sec * 1000ull * 1000ull; }
+constexpr uint64_t minutes(uint64_t minutes) { return minutes * seconds(60); }
+} // namespace
+
 void DoorWatcher::check_door() {
   gpio_put(LED_PIN, 1);
-  if (gpio_get(GPIO_MAGNETIC) == 0) {
-    printf("  DOOR CLOSE\n");
-    send_message(GarageAlarm::DOOR_CLOSE);
-  } else {
-    printf("  DOOR OPEN\n");
-    send_message(GarageAlarm::DOOR_OPEN);
+
+  const auto now = time_us_64();
+  const auto new_state =
+      gpio_get(GPIO_MAGNETIC) == 0 ? DoorState::Close : DoorState::Open;
+  printf("  %llu : %s -> %s\n", now,
+         state.has_value() ? as_string(*state) : "FIRST", as_string(new_state));
+  if (new_state != state || (now - last_time) > minutes(15)) {
+    printf("     --> ALARM!!!\n");
+    send_message(new_state == DoorState::Close ? GarageAlarm::DOOR_CLOSE
+                                               : GarageAlarm::DOOR_OPEN);
+    state.emplace(new_state);
+    last_time = now;
   }
+
   gpio_put(LED_PIN, 0);
   dormant_sleep_until();
 }
@@ -134,5 +154,5 @@ void DoorWatcher::dormant_sleep_until() {
 
   my_sleep_goto_dormant_until_pin(
       GPIO_MAGNETIC, IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_HIGH_BITS |
-                      IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_LOW_BITS);
+                         IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_LOW_BITS);
 }
