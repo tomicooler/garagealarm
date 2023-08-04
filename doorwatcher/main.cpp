@@ -111,9 +111,6 @@ void DoorWatcher::send_message(std::string message) {
 }
 
 namespace {
-const char *as_string(const DoorState state) {
-  return state == DoorState::Close ? "CLOSE" : "OPEN";
-}
 constexpr uint64_t seconds(uint64_t sec) { return sec * 1000ull * 1000ull; }
 constexpr uint64_t minutes(uint64_t minutes) { return minutes * seconds(60); }
 } // namespace
@@ -124,10 +121,7 @@ void DoorWatcher::check_door() {
   const auto now = time_us_64();
   const auto new_state =
       gpio_get(GPIO_MAGNETIC) == 0 ? DoorState::Close : DoorState::Open;
-  printf("  %llu : %s -> %s\n", now,
-         state.has_value() ? as_string(*state) : "FIRST", as_string(new_state));
   if (new_state != state || (now - last_time) > minutes(15)) {
-    printf("     --> ALARM!!!\n");
     send_message(new_state == DoorState::Close ? GarageAlarm::DOOR_CLOSE
                                                : GarageAlarm::DOOR_OPEN);
     state.emplace(new_state);
