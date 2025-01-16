@@ -5,35 +5,49 @@ import time
 import requests
 import json
 import serial
+import google.auth.transport.requests
 
-SECRET_KEY = config("MY_GARAGE_SERVER_KEY")
+from google.oauth2 import service_account
+
+SERVICE_ACCOUNT_FILE = config("MY_GARAGE_SERVICE_ACCOUNT_FILE")
+PROJECT_ID = config("MY_GARAGE_FCM_PROJECT_ID")
 DEVICE_TOKEN = config("MY_GARAGE_DEVICE_TOKEN")
-
 SERIAL_INTERFACE = config("MY_GARAGE_SERIAL_INTERFACE", default="/dev/ttyACM0")
+
+BASE_URL = "https://fcm.googleapis.com"
+FCM_ENDPOINT = "v1/projects/" + PROJECT_ID + "/messages:send"
+FCM_URL = BASE_URL + "/" + FCM_ENDPOINT
+SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
+
+
+def _get_access_token():
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    )
+    request = google.auth.transport.requests.Request()
+    credentials.refresh(request)
+    return credentials.token
 
 
 def send_notification(action: str):
     timestamp = int(time.time() * 1000)
 
     headers = {
-        "Content-Type": "application/json",
-        "Authorization": "key={}".format(SECRET_KEY),
+        "Content-Type": "application/json; UTF-8",
+        "Authorization": "Bearer " + _get_access_token(),
     }
 
     body = {
-        "to": DEVICE_TOKEN,
-        "priority": "high",
-        "data": {
-            "timestamp": timestamp,
-            "action": action,
-        },
+        "message": {
+            "token": DEVICE_TOKEN,
+            "android": {"priority": "high"},
+            "data": {"timestamp": str(timestamp), "action": action},
+        }
     }
 
     print("Sending message action='{}' timestamp='{}'".format(action, timestamp))
 
-    response = requests.post(
-        "https://fcm.googleapis.com/fcm/send", headers=headers, data=json.dumps(body)
-    )
+    response = requests.post(FCM_URL, headers=headers, data=json.dumps(body))
 
     print(
         "Response status_code='{}' json='{}'".format(
