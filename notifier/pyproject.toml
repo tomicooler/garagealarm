@@ -9,6 +9,7 @@ dependencies = [
     "requests>=2.26.0",
     "python-decouple>=3.5",
     "pySerial>=3.5",
+    "google-api-python-client>=2.159.0"
 ]
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}

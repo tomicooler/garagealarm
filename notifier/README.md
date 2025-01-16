@@ -17,7 +17,7 @@ pdm update
 eval "$(pdm --pep582)"
 
 # auto format code
-__pypackages__/3.10/bin/black main.py
+__pypackages__/3.13/bin/black main.py
 
 # running
 ./main.py
@@ -25,8 +25,9 @@ __pypackages__/3.10/bin/black main.py
 
 Configuring using environment variables or an env file.
 ```
-MY_GARAGE_SERVER_KEY="fcm server key that you download from your Firebase console"
-MY_GARAGE_DEVICE_TOKEN="device token id that your device received from the MyGarage android app"
+MY_GARAGE_SERVICE_ACCOUNT_FILE="The location of the generated private key json file for the Firebase service: https://firebase.google.com/docs/cloud-messaging/migrate-v1#python"
+MY_GARAGE_FCM_PROJECT_ID="The project ID from the service account file"
+MY_GARAGE_DEVICE_TOKEN="The device token id that your device received from the MyGarage android app"
 ```
 
 Deploying on a Raspberry Pi
