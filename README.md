@@ -157,7 +157,6 @@ mkdir build && cd build && cmake .. && make
 # Then copy the uf2 files to your picos
 
 # Variant B
-#   Use my pico-sdk fork: https://github.com/tomicooler/pico-sdk/commit/cefa36599c5734fc84ffccfe75869680f1b727d1
 cp watchdog/watchdog-config.h.example watchdog/watchdog-config.h # edit the config file
 mkdir build && cd build && cmake -DPICO_BOARD=pico_w .. && make
 # Then copy the  watchdog.uf2 file to your pico w

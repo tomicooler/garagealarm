@@ -12,6 +12,7 @@ if(PICO_CYW43_SUPPORTED)
         ../third_party/tiny-AES-c/aes.c
         ../common/common.h
         ../common/common.cpp
+        mbedtls_config.h
         lwipopts.h
         watchdog-config.h
         dateutils.h
@@ -28,10 +29,7 @@ if(PICO_CYW43_SUPPORTED)
     )
 
     target_include_directories(watchdog PRIVATE ${CMAKE_CURRENT_LIST_DIR})
-
-    # NOTE: currenty I'm using my pico-sdk fork: https://github.com/tomicooler/pico-sdk/commit/cefa36599c5734fc84ffccfe75869680f1b727d1
-    # TODO: update this when this PR is merged: https://github.com/raspberrypi/pico-sdk/pull/894
-    target_link_libraries(watchdog pico_stdlib hardware_spi hardware_interp pico_cyw43_arch_lwip_threadsafe_background pico_stdlib pico_lwip_mbedtls pico_mbedtls)
+    target_link_libraries(watchdog pico_stdlib hardware_spi hardware_interp pico_cyw43_arch_lwip_threadsafe_background pico_stdlib pico_lwip_mbedtls pico_mbedtls hardware_rtc)
 else()
     message("Watchdog - Pico")
     add_executable(watchdog
@@ -47,7 +45,7 @@ else()
         main.cpp
     )
 
-    target_link_libraries(watchdog pico_stdlib hardware_spi hardware_interp)
+    target_link_libraries(watchdog pico_stdlib hardware_spi hardware_interp hardware_rtc)
 endif()
 
 # enable usb output, disable uart output
