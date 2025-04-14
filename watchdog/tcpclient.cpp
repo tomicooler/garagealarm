@@ -18,17 +18,20 @@ struct TcpClientPrivate {
 
   bool is_finished() const;
   bool send_message(const ip_addr_t &ip, const int port, std::string &&message);
+  std::string get_last_response();
 
 private:
   err_t handle_result(err_t err);
   err_t close();
   void send_message();
+  void buffer_response(const unsigned char *data, u16_t len);
 
 private:
   altcp_pcb *tcp_pcb{nullptr};
   altcp_allocator_t tls_allocator = {
       altcp_tls_alloc, altcp_tls_create_config_client(nullptr, 0)};
   std::string message;
+  std::string last_response;
 };
 
 bool TcpClientPrivate::is_finished() const { return tcp_pcb == nullptr; }
@@ -40,6 +43,7 @@ bool TcpClientPrivate::send_message(const ip_addr_t &ip, const int port,
     return false;
   }
 
+  this->last_response = {};
   this->message = std::move(message);
   printf("tcp# connect %s %d\n", ipaddr_ntoa(&ip), port);
 
@@ -78,6 +82,8 @@ bool TcpClientPrivate::send_message(const ip_addr_t &ip, const int port,
         if (p->tot_len > 0) {
           printf("tcp# recv %d err %d\n", p->tot_len, err);
           for (struct pbuf *q = p; q != NULL; q = q->next) {
+            tcp->buffer_response(
+                reinterpret_cast<const unsigned char *>(q->payload), q->len);
             Utils::hexdump(q->payload, q->len);
           }
           altcp_recved(tpcb, p->tot_len);
@@ -112,6 +118,8 @@ bool TcpClientPrivate::send_message(const ip_addr_t &ip, const int port,
 
   return err == ERR_OK;
 }
+
+std::string TcpClientPrivate::get_last_response() { return last_response; }
 
 err_t TcpClientPrivate::handle_result(err_t err) {
   if (err == 0) {
@@ -160,6 +168,16 @@ void TcpClientPrivate::send_message() {
   message.clear();
 }
 
+void TcpClientPrivate::buffer_response(const unsigned char *data, u16_t len) {
+  if (last_response.size() > 3072) {
+    printf("tcp# chunking last_response %d\n", last_response.size());
+    last_response.clear();
+  }
+
+  printf("appending to response buffer %d\n", len);
+  last_response += std::string(reinterpret_cast<const char *>(data), len);
+}
+
 TcpClient::TcpClient() : d(std::make_unique<TcpClientPrivate>()) {}
 
 TcpClient::~TcpClient() {}
@@ -170,3 +188,5 @@ bool TcpClient::send_message(const ip_addr_t &ip, const int port,
                              std::string &&message) {
   return d->send_message(ip, port, std::move(message));
 }
+
+std::string TcpClient::get_last_response() { return d->get_last_response(); }

@@ -13,6 +13,7 @@ struct TcpClient {
 
   bool is_finished() const;
   bool send_message(const ip_addr_t &ip, const int port, std::string &&message);
+  std::string get_last_response();
 
 private:
   std::unique_ptr<TcpClientPrivate> d;

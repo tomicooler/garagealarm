@@ -25,6 +25,19 @@ if(PICO_CYW43_SUPPORTED)
         ntp.cpp
         tcpclient.h
         tcpclient.cpp
+        http.h
+        http.cpp
+        fcm.h
+        fcm.cpp
+        base64.h
+        base64.cpp
+        stringutils.h
+        stringutils.cpp
+        rs256.h
+        rs256.cpp
+        oauth2.h
+        oauth2.cpp
+        action.h
         main.cpp
     )
 

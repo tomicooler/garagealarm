@@ -1,4 +1,11 @@
 constexpr char WIFI_SSID[] = "wifi-ssid";
 constexpr char WIFI_PASSWORD[] = "wifi-password";
-constexpr char FIREBASE_SERVER_KEY[] = "server-key";
-constexpr char FIREBASE_DEVICE_TOKEN[] = "device-token";
+
+constexpr char CLIENT_EMAIL[] = "firebase-adminsdk-random@project.iam.gserviceaccount.com";
+constexpr char PRIVATE_KEY_ID[] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+constexpr char PRIVATE_KEY[] = "-----BEGIN PRIVATE KEY-----\n.....\n-----END PRIVATE KEY-----\n";
+constexpr char SCOPE[] = "https://www.googleapis.com/auth/firebase.messaging";
+constexpr char TOKEN_URI[] ="https://oauth2.googleapis.com/token";
+constexpr char PROJECT_ID[] = "project-id";
+
+constexpr char DEVICE_TOKEN[] = "device-token";

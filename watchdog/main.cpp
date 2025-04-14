@@ -6,61 +6,23 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "action.h"
+
 #ifdef PICO_WIFI
 #include "dateutils.h"
 #include "dns.h"
+#include "fcm.h"
 #include "ntp.h"
+#include "oauth2.h"
 #include "poller.h"
 #include "tcpclient.h"
 #include "watchdog-config.h" // check the watchdog-config.h.example
 #include <hardware/rtc.h>
+#include <inttypes.h>
 #include <pico/cyw43_arch.h>
 #endif
 
 namespace {
-
-enum class Action { DoorOpen, DoorClose, IvTopMismatch, IvBottomOld };
-
-#ifdef PICO_WIFI
-std::string action_to_string(Action action) {
-  switch (action) {
-  case Action::DoorOpen:
-    return std::string{"open"};
-  case Action::DoorClose:
-    return std::string{"close"};
-  case Action::IvTopMismatch:
-    return std::string{"iv_top_mismatch"};
-  case Action::IvBottomOld:
-    return std::string{"iv_bottom_old"};
-  }
-  return std::string{};
-}
-
-std::string create_http_request(Action action) {
-  datetime_t t;
-  rtc_get_datetime(&t);
-
-  std::string content = R"({"to": ")" + std::string{FIREBASE_DEVICE_TOKEN} +
-                        R"(", "priority": "high", "data": {"timestamp": )" +
-                        std::to_string(DateUtils::to_epoch(t) * 1000) +
-                        R"(, "action": ")" + action_to_string(action) +
-                        R"("}})";
-
-  std::string request = "POST /fcm/send HTTP/1.1\r\n"
-                        "Host: fcm.googleapis.com\r\n"
-                        "Connection: close\r\n"
-                        "Content-type: application/json\r\n"
-                        "Authorization: key=" +
-                        std::string{FIREBASE_SERVER_KEY} +
-                        "\r\n"
-                        "Content-Length: " +
-                        std::to_string(content.size()) +
-                        "\r\n"
-                        "\r\n" +
-                        content + "\r\n";
-  return request;
-}
-#endif
 
 std::optional<Action> get_action(const std::string &message) {
   printf(">> decoded message >>\n");
@@ -159,6 +121,12 @@ int main() {
 
   Ntp ntp;
   Dns dns;
+  OAuth2 oauth2{OAuth2::Config{
+      CLIENT_EMAIL, PRIVATE_KEY_ID,
+      std::string{PRIVATE_KEY, sizeof(PRIVATE_KEY) / sizeof(const char)},
+      PROJECT_ID, TOKEN_URI, SCOPE}};
+  FCM fcm{PROJECT_ID, DEVICE_TOKEN};
+
   TcpClient client;
 
   for (int i = 0; i < 5; ++i) {
@@ -166,21 +134,61 @@ int main() {
     ntp.loop();
   }
 
+  uint64_t last_oauth_timestamp = 0;
+  uint64_t last_expires_in = 3599;
+  std::string auth_token;
+
   WatchDog watchdog([&](Action action) {
     Poller::led_on();
     print_action(action);
-    if (const auto address = dns.lookup("fcm.googleapis.com"); address) {
-      client.send_message(*address, 443, create_http_request(action));
-    } else {
-      printf("Could not resolve fmc.googleapis.com\n");
+
+    // OAuth2 refresh token
+    const auto now = DateUtils::unixnowseconds();
+    printf("OAuth2 now='%" PRIu64 "' last_oauth_timestamp='%" PRIu64
+           "' last_expires_in='%" PRIu64 "' token='%s'\n",
+           now, last_oauth_timestamp, last_expires_in, auth_token.c_str());
+    if (now - last_oauth_timestamp > last_expires_in) {
+      auth_token.clear();
+      if (const auto address = dns.lookup("oauth2.googleapis.com"); address) {
+        client.send_message(*address, 443,
+                            HTTP::write(oauth2.create_request()));
+        while (!client.is_finished()) {
+          printf(" ... waiting to finish oauth2 ... polling\n");
+          Poller::poll();
+        }
+
+        const auto raw_http_response = client.get_last_response();
+        printf("=== %d\n", raw_http_response.size());
+        printf("%s\n", raw_http_response.c_str());
+        printf("======\n");
+        if (const auto oauth_response =
+                OAuth2::parse_response(HTTP::read(raw_http_response));
+            oauth_response) {
+          last_oauth_timestamp = DateUtils::unixnowseconds();
+          last_expires_in = std::max(0, oauth_response->expires_in);
+          auth_token = oauth_response->access_token;
+        }
+      } else {
+        printf("Could not resolve oauth2.googleapis.com\n");
+      }
     }
 
-    while (!client.is_finished()) {
-      printf(" ... waiting to finish sending ... polling\n");
-      Poller::poll();
+    // FCM send message
+    if (!auth_token.empty()) {
+      if (const auto address = dns.lookup("fcm.googleapis.com"); address) {
+        client.send_message(
+            *address, 443, HTTP::write(fcm.create_request(action, auth_token)));
+        while (!client.is_finished()) {
+          printf(" ... waiting to finish fcm ... polling\n");
+          Poller::poll();
+        }
+      } else {
+        printf("Could not resolve fmc.googleapis.com\n");
+      }
     }
     Poller::led_off();
   });
+
 #else
   WatchDog watchdog(print_action);
 #endif
