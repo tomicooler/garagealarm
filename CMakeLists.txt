@@ -8,7 +8,7 @@ include(pico_extras_import.cmake)
 
 project(garagealarm C CXX ASM)
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 if (PICO_SDK_VERSION_STRING VERSION_LESS "2.1.1")
     message(FATAL_ERROR "Raspberry Pi Pico SDK version 2.2.1 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
