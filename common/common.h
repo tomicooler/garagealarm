@@ -37,7 +37,7 @@ static constexpr long BANDWIDTH = 125E3;
 static constexpr int SPREADING_FACTOR = 10;
 static constexpr int CODING_RATE = 5;
 
-static constexpr uint8_t PRESHARED_KEY[] = "replacethis";
+static constexpr uint8_t PRESHARED_KEY[] = "replacethis1234";
 
 static constexpr uint8_t MESSAGE_HEADER = 0x42;
 
@@ -60,7 +60,7 @@ std::optional<Packet> parse_packet(const std::vector<uint8_t> &bytes);
 
 #ifdef NDEBUG
 constexpr bool ensure_replaced() {
-  constexpr uint8_t DONT_USE_THIS[] = "replacethis";
+  constexpr uint8_t DONT_USE_THIS[] = "replacethis1234";
   for (unsigned int i = 0; i < sizeof(DONT_USE_THIS); ++i) {
     if (PRESHARED_KEY[i] != DONT_USE_THIS[i]) {
       return true;
@@ -69,11 +69,11 @@ constexpr bool ensure_replaced() {
   return false;
 }
 
-static_assert(sizeof(PRESHARED_KEY) == 12,
-              "The AES preshared key size must be 12!");
+static_assert(sizeof(PRESHARED_KEY) == 16,
+              "The AES preshared key size must be 16!");
 
 static_assert(ensure_replaced(),
-              "Replace the AES preshared key with a random 12 byte key!");
+              "Replace the AES preshared key with a random 16 byte key!");
 #endif
 
 } // namespace GarageAlarm

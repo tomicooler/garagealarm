@@ -1,5 +1,6 @@
 #include "dateutils.h"
 
+#include <hardware/rtc.h>
 #include <pico/util/datetime.h>
 
 // Credits to
@@ -42,4 +43,10 @@ uint64_t DateUtils::to_epoch(const datetime_t &t) {
   return timeutils_seconds_since_2000(t.year, t.month, t.day, t.hour, t.min,
                                       t.sec) +
          TIMEUTILS_SECONDS_1970_TO_2000;
+}
+
+uint64_t DateUtils::unixnowseconds() {
+  datetime_t t;
+  rtc_get_datetime(&t);
+  return DateUtils::to_epoch(t);
 }

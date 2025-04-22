@@ -6,6 +6,7 @@
 namespace DateUtils {
 
 uint64_t to_epoch(const datetime_t &t);
+uint64_t unixnowseconds();
 
 } // namespace DateUtils
 

@@ -9,19 +9,19 @@ it would be nice to know if I closed the door..., How Hard Can It Be?
 <a href="https://docs.google.com/presentation/d/1tIYUefcGcdnDLyIjWLCoXbDT66C93z82hiz6jU8Zyz8">Veszprem Technology Meetup Slides with Pictures and useful Links</a>
 
 
-**Variant A**
+## Variant A
   * 2x Raspberry Pico
   * 1x Raspberry Pi 3 or something with Internet Connection
 <img src="doc/architecture.png"/>
 
 
-**Variant B**
+## Variant B
   * 1x Raspberry Pico
   * 1x Raspberry Pico W
 <img src="doc/architecture-pico-w.png"/>
 
 
-**doorwatcher**
+## doorwatcher
 
 A component built with a Raspberry Pico, a magnetic sensor and a LoRa module.
 The magnetic reed switch is used to detect whether the door is open or closed.
@@ -30,33 +30,36 @@ when the magnetic switch changes, sends an open_/close message using LoRa.
 Powered by 3x AA batteries.
 
 
-**watchdog**
+## watchdog
 
-Variant A: A component built with a Raspberry Pico and a LoRa module. It receives LoRa packets
+### Variant A
+
+A component built with a Raspberry Pico and a LoRa module. It receives LoRa packets
 and prints action words to the USB serial, e.g.: #ACTION_DOOR_OPEN#.
 
-Variant B: A component built with a Raspberry Pico W and a LoRa module. It receives LoRa packets
+### Variant B
+
+A component built with a Raspberry Pico W and a LoRa module. It receives LoRa packets
 and and sends Firebase Push Messages. The lwIP stack with Mbed-TLS is used to send
-HTTP request to fcm.googleapis.com. DNS lookup and NTP time synchronization is implemented
+HTTP request to fcm.googleapis.com. OAuth2, DNS lookup and NTP time synchronization is implemented
 too.
 
 
-**notifier**
+## notifier
 
 It runs on a Raspberry Pi 3B, the watchdog is connected to this Pi using an USB cable.
 It reads the watchdog's log and creates Firebase Push Notifications when something happens.
 Internet access is needed here.
 
 
-**app**
+## app
 
 An android application that receives the notifications, shows them to the user,
 and keeps track of the door state as there is no server in this architecture.
 
 NOTE: set the notifications to Alerting mode in the Android <a href="https://support.google.com/android/answer/9079661?hl=en#zippy=%2Cchoose-if-notifications-interrupt-you-or-stay-silent">Settings</a> application.
 
-Communication
--------------
+# Communication
 
 <a href="https://lora-developers.semtech.com/documentation/tech-papers-and-guides/lora-and-lorawan/">LoRa</a> is an RF
 modulation technology for low-power, wide area networks. LoRa is purely a physical (PHY), or “bits”
@@ -64,8 +67,8 @@ layer implementation, as defined by the OSI seven-layer Network Mode.
 
 Notice that this project uses **LoRa** as "peer to peer" communication and not **LoRaWAN**.
 
-**Protocol**
-```
+## Protocol
+```cpp
 struct Packet {
   uint8_t header{0x42};
   uint8_t iv[16]{};
@@ -96,7 +99,7 @@ Example: close
 000010: c1 d3 d6 92 c1 22                                ....."
 ```
 
-Security properties:
+### Security properties
  - **Non repudiation:** No, the receiver has the key, so it can forge any message.
  - **Data Integrity:** ?Yes?, old messages can’t be played back as long as the receiver is not restarted, message loss could be detected.
  - **Authentication:** ?Yes?, as long as the receiver is not restarted, and sender is verified manually at the first message.
@@ -114,8 +117,7 @@ Idea, if communication were duplex (AES-128/GCM):
  3. A -> B: This is what! [random_B1]
 
 
-Hardware
---------
+# Hardware
 
  - 2x Raspberry Pico
  - 2x RFM95W LoRa module 868 MHz / 2x RA02-LORA-SX1278 module 433 MHz
@@ -145,38 +147,41 @@ Hardware
 
 
 
-Building
---------
+# Building
 
-**doorwatcher**, **watchdog**
+```bash
+git submodule init
+git submodule update
+```
+
+## doorwatcher, watchdog
 
 Setup your pico build environemnt then:
-```
+```bash
 # Variant A
 mkdir build && cd build && cmake .. && make
 # Then copy the uf2 files to your picos
 
 # Variant B
-#   Use my pico-sdk fork: https://github.com/tomicooler/pico-sdk/commit/cefa36599c5734fc84ffccfe75869680f1b727d1
 cp watchdog/watchdog-config.h.example watchdog/watchdog-config.h # edit the config file
 mkdir build && cd build && cmake -DPICO_BOARD=pico_w .. && make
 # Then copy the  watchdog.uf2 file to your pico w
 ```
 
-**notifier**
+## notifier
 
 Check the README.
 
-**app**
+## app
 
 Create a Firebase project add an android application with the proper package names (probably it should be changed).
 Then download the **google-services.json** to app/app directory from your Firebase console.
 Build the project with Android Studio.
 
 
-Developer workflow tips with a Raspberry Pi 3B
+### Developer workflow tips with a Raspberry Pi 3B
 
-```
+```bash
 ssh pi@RASPBERRY_IP
 
 # use sshfs to mount the project on the pi
